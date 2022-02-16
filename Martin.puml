@@ -1,4 +1,20 @@
 @startuml
+/'
+<|--    继承
+*--     组合
+.--     聚合
+..      虚线
+--      直线
+<|..    实现
+^--     继承
+-->     关联
+..>     依赖
+<--*    组合关联
+#--
+x--
+}--
++--
+'/
 
 class Account {
     int totalMoney
@@ -16,12 +32,14 @@ class RealCount {
     int moneyRate;      /'资金利用率 0.01%'/
     int retreatRate     /'最大回撤 0.01%'/
     int yieldRate       /'收益率 0.01%'/
+    int totalProfit     /'累计利润'/
+    Deal deal           /'交易详情'/
 }
 
-/'历史交易'/
-class deal {
-    int stockCode
-    int stockName
+/'交易详情'/
+class Deal {
+    String stockCode
+    String stockName
     Date buyTime
     Date sellTime
     int buyPrice
@@ -29,10 +47,53 @@ class deal {
     int profit
 }
 
-class HoldShare {
-
+/'持仓股票基本信息'/
+class HoldBasicInfo{
+    String stockCode
+    String stockName
+    Date createTime /'建仓时间'/
+    int stockCnt
+    int price       /'持仓价格'/
+    int profit      /'持仓利润'/
+    int tradeCnt    /'交易次数'/
+    int sucCnt      /'成功次数'/
+    Date endTime    /'平仓时间'/
 }
 
+/'阶梯数组'/
+class LadderHold {
+    int ladderPrice
+    int buyTime
+     int dealTime
+    int buyPrice
+}
 
+/'单一持仓'/
+class HoldShare {
+    int guidePrice                  /'基准价格'/
+    int ladderRate                  /'阶梯比例，单位0.1%'/
+    LadderHold ladderHold [ ]       /'阶梯数组'/
+    HoldBasicInfo holdBasicInfo;
+
+    calLadderHold()                 /'计算阶梯数组'/
+}
+
+class Martin {
+    Account account             /'账户基本信息'/
+    RealCount realCount [ ]     /'历史统计信息'/
+    HoldShare holdShare [ ]     /'维护的持仓信息'/
+
+    initTrade()                 /'初始交易策略'/
+    nAdd0()                     /'n+0策略'/
+}
+
+Martin *-- Account
+Martin *-- HoldShare
+Martin *-- RealCount
+
+HoldShare *-- HoldBasicInfo
+HoldShare *-- LadderHold
+
+RealCount *-- Deal
 
 @enduml
