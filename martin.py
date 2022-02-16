@@ -116,6 +116,7 @@ class Martin:
                     continue
                 if (dt.datetime.now() - ladder.deal_time).seconds < SECONDS_PER:
 
+
             #判断是否买入
 
 
