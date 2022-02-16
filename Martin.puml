@@ -1,0 +1,38 @@
+@startuml
+
+class Account {
+    int totalMoney
+    int remain
+    int cost
+    int profit          /'持仓利润'/
+    int marketValue     /'持有市值'/
+    int tradeCnt        /'交易次数'/
+    int sucCnt          /'成功次数'/
+    int totalProfit     /'累计利润'/
+}
+
+/' 实时统计 '/
+class RealCount {
+    int moneyRate;      /'资金利用率 0.01%'/
+    int retreatRate     /'最大回撤 0.01%'/
+    int yieldRate       /'收益率 0.01%'/
+}
+
+/'历史交易'/
+class deal {
+    int stockCode
+    int stockName
+    Date buyTime
+    Date sellTime
+    int buyPrice
+    int sellPrice
+    int profit
+}
+
+class HoldShare {
+
+}
+
+
+
+@enduml
