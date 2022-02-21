@@ -106,22 +106,41 @@ class Martin:
         for hold_share in self.hold_shares:
             if (hold_share.stock_cnt == 0) or (hold_share.create_time is None):
                 continue
-            #获取当前价格
+            #获取当前价格 todo
             now_price = 0
-            #判断是否卖出
+            #判断是否卖出和买入
             for ladder in hold_share.ladder_holds:
                 if ladder.stock_cnt == 0:
-                    continue
-                if now_price < ladder.buy_price * (1 + 0.001 * self.profit_rate):
+                    if ladder.ladder_price > now_price:
+                        #买入 todo
+                        ladder.buy_price = 0
+                        ladder.stock_cnt = 0
+                        ladder.deal_time = dt.datetime.now()
+                        ladder.buy_time = dt.datetime.now()
+                        #更新账户信息 todo
+                elif now_price < ladder.buy_price * (1 + 0.001 * self.profit_rate):
                     continue
                 if (dt.datetime.now() - ladder.deal_time).seconds < SECONDS_PER:
+                    #规避n+1
+                    for temp in hold_share.ladder_holds:
+                        if temp.stock_cnt == ladder.stock_cnt and (dt.datetime.now() - temp.deal_time).seconds > SECONDS_PER:
+                            temp.deal_time = ladder.deal_time
+                    #卖出 todo
+                    ladder.buy_price = 0
+                    ladder.stock_cnt = 0
+                    ladder.deal_time = dt.datetime.now()
+                    ladder.buy_time = dt.datetime.now()
+                    #更新账户信息 todo
+
+
+
 
 
             #判断是否买入
 
 
 if __name__ == '__main__':
-
+    a = 0
 
 
 
