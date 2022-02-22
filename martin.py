@@ -3,20 +3,23 @@ import datetime as dt
 
 BASE_PRICE_LADDER = 100     # 阶梯数
 SECONDS_PER = (24 * 3600)     #
-
-
+TRADE_FEE_RATE = 0.0001         #手续费
+TRADE_FEE_MIN = 5               #最低手续费
+TRADE_PRICE_MIN = 10000         #单次最低交易价格
+HOLD = 100                      #一手100股
 class Account:
 
-    def __init__(self, totalMoney, remain, cost, profit,
-                 markValue, tradeCnt, sucCnt, totalProfit):
-        self.totalMoney = totalMoney
+    def __init__(self, init_money, total_money, remain, cost, profit,
+                 market_value, trade_cnt, suc_cnt, total_profit):
+        self.init_money = init_money
+        self.total_money = total_money
         self.remain = remain
         self.cost = cost
         self.profit = profit
-        self.marketValue = markValue
-        self.tradeCnt = tradeCnt
-        self.sucCnt = sucCnt
-        self.totalProfit = totalProfit
+        self.market_value = market_value
+        self.trade_cnt = trade_cnt
+        self.suc_cnt = suc_cnt
+        self.total_profit = total_profit
 
 
 #阶梯数组，单个价格阶梯
@@ -93,6 +96,27 @@ class Martin:
     def run(self):
         a = self.account
 
+    def cal_buy_cnt(self, now_price):
+
+        return ((int)(TRADE_PRICE_MIN / now_price / HOLD) + 1) * HOLD
+
+
+    def order(self, stock_code, now_price, stock_cnt = 0, is_buy = True):
+        if is_buy:
+            if stock_cnt == 0:
+                stock_cnt = self.cal_buy_cnt(now_price)
+            cost = now_price * stock_cnt
+            trade_fee = cost * TRADE_FEE_RATE
+            if trade_fee < TRADE_FEE_MIN:
+                trade_fee = TRADE_FEE_MIN
+            if cost + trade_fee > self.account.remain:
+                return Deal(0, 0)
+            #下单 todo
+            return Deal(now_price, stock_cnt)
+        else:
+            #下单 todo
+            return Deal(now_price, stock_cnt, False)
+
     def ladder_trade(self):
         for hold_share in self.hold_shares:
             if (hold_share.stock_cnt == 0) or (hold_share.create_time is None):
@@ -103,32 +127,56 @@ class Martin:
             for ladder in hold_share.ladder_holds:
                 if ladder.stock_cnt == 0:
                     if ladder.ladder_price > now_price:
-                        #买入 todo
-                        ladder.buy_price = 0
-                        ladder.stock_cnt = 0
+                        deal = self.order(hold_share.stock_code, now_price)
+                        ladder.buy_price = deal.price
+                        ladder.stock_cnt = deal.stock_cnt
                         ladder.deal_time = dt.datetime.now()
                         ladder.buy_time = dt.datetime.now()
-                        #更新账户信息 todo
+                        self.update_hold_share(hold_share, deal)
+
                 elif now_price < ladder.buy_price * (1 + 0.001 * self.profit_rate):
                     continue
+
                 if (dt.datetime.now() - ladder.deal_time).seconds < SECONDS_PER:
                     #规避n+1
                     for temp in hold_share.ladder_holds:
                         if temp.stock_cnt == ladder.stock_cnt and (dt.datetime.now() - temp.deal_time).seconds > SECONDS_PER:
                             temp.deal_time = ladder.deal_time
-                    #卖出 todo
+                    deal = self.order(hold_share.stock_code, now_price, ladder.stock_cnt, False)
+                    deal.buy_price = ladder.buy_price
                     ladder.buy_price = 0
-                    ladder.stock_cnt = 0
+                    ladder.stock_cnt -= deal.stock_cnt
                     ladder.deal_time = dt.datetime.now()
                     ladder.buy_time = dt.datetime.now()
-                    #更新账户信息 todo
+                    self.update_hold_share(hold_share, deal)
 
     def update_hold_share(self, hold_share, deal):
+        cost = deal.price * deal.stock_cnt
         if deal.is_buy :
+            hold_share.price = (hold_share.price * hold_share.stock_cnt + cost) \
+                               / (hold_share.stock_cnt + deal.stock_cnt)
             hold_share.stock_cnt += deal.stock_cnt
-            hold_share.price = (hold_share.price * hold_share.stock_cnt + deal.price * deal.stock_cnt) / hold_share.stock_cnt
+            self.account.remain -= cost
+            self.account.cost += cost
         else:
-            hold_share.profit = hold_share.profit
+            profit = (deal.price - deal.buy_price) * deal.stock_cnt
+
+            if profit > 0:
+                hold_share.suc_cnt += 1
+                self.account.suc_cnt += 1
+            else:
+                hold_share.suc_cnt -= 1
+                self.account.suc_cnt -= 1
+            hold_share.trade_cnt += 1
+            hold_share.price = (hold_share.price * hold_share.stock_cnt - cost) \
+                               / (hold_share.stock_cnt - deal.stock_cnt)
+            hold_share.profit = hold_share.profit + profit
+            hold_share.stock_cnt -= deal.stock_cnt
+            self.account.remain += cost
+            self.account.cost -= cost
+            self.account.trade_cnt += 1
+            self.account.profit += profit
+
 
 
 
