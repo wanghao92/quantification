@@ -19,28 +19,6 @@ class Account:
         self.totalProfit = totalProfit
 
 
-class Deal:
-    def __init__(self, stock_code, stock_name, buy_time,
-                 sell_time, buy_price, sell_price, profit):
-        self.stock_code = stock_code
-        self.stock_name = stock_name
-        self.buy_time = buy_time
-        self.sell_time = sell_time
-        self.buy_price = buy_price
-        self.sell_price = sell_price
-        self.profit = profit
-
-
-class RealCount:
-
-    def __init__(self, money_rate, retreat_rate, yield_rate, total_profit, deal):
-        self.money_rate = money_rate
-        self.retreat_rate = retreat_rate
-        self.yield_rate = yield_rate
-        self.total_profit = total_profit
-        self.deal = deal
-
-
 #阶梯数组，单个价格阶梯
 class LadderHold:
 
@@ -60,15 +38,15 @@ class HoldShare:
                  profit = 0, trade_cnt = 0, suc_cnt = 0, end_time = None, base_price = 0, ladder_rate = 1):
         self.stock_code = stock_code
         self.stock_name = stock_name
-        self.create_time = create_time
-        self.stock_cnt = stock_cnt
-        self.price = price
-        self.profit = profit
-        self.trade_cnt = trade_cnt
-        self.suc_cnt = suc_cnt
-        self.end_time = end_time
-        self.base_price = base_price
-        self.ladder_rate = ladder_rate
+        self.create_time = create_time  #建仓时间
+        self.stock_cnt = stock_cnt      #持仓数量
+        self.price = price              #持仓价格
+        self.profit = profit            #持仓利润
+        self.trade_cnt = trade_cnt      #交易次数
+        self.suc_cnt = suc_cnt          #成功次数
+        self.end_time = end_time        #平仓时间
+        self.base_price = base_price    #基准价格
+        self.ladder_rate = ladder_rate  #阶梯利率
         self.ladder_holds = self.cal_ladder_hold()       #生成价格阶梯数组
 
     def cal_ladder_hold(self):
@@ -82,8 +60,21 @@ class HoldShare:
 
         return price_ladder
 
-class Martin:
+class Deal:
+    '''
+        price:交易价格
+        stock_cnt：交易数量
+        is_buy：买入True，卖出False
+        buy_price：买入时价格，当is_buy为false时有效
+    '''
+    def __init__(self, price, stock_cnt, is_buy = True, buy_price = 0):
+        self.price = price
+        self.stock_cnt = stock_cnt
+        self.is_buy = is_buy
+        self.buy_price = buy_price
 
+
+class Martin:
 
     def __init__(self, account, hold_shares, period = 60, profit_rate = 10, is_persistence = False):
         """
@@ -132,11 +123,17 @@ class Martin:
                     ladder.buy_time = dt.datetime.now()
                     #更新账户信息 todo
 
+    def update_hold_share(self, hold_share, deal):
+        if deal.is_buy :
+            hold_share.stock_cnt += deal.stock_cnt
+            hold_share.price = (hold_share.price * hold_share.stock_cnt + deal.price * deal.stock_cnt) / hold_share.stock_cnt
+        else:
+            hold_share.profit = hold_share.profit
 
 
 
 
-            #判断是否买入
+
 
 
 if __name__ == '__main__':
