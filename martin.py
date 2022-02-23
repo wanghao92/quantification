@@ -51,6 +51,49 @@ class HoldShare:
         self.base_price = base_price    #基准价格
         self.ladder_rate = ladder_rate  #阶梯利率
         self.ladder_holds = self.cal_ladder_hold()       #生成价格阶梯数组
+        self.hold_prices = []
+
+
+    '''
+        cal can be dealed
+        规避n+1
+    '''
+    def cal_can_deal(self, now_time, stock_cnt):
+        can_deal_cnt = 0
+        for i in range(len(self.hold_prices)):
+            if (now_time - self.hold_prices[i]["deal_time"]).seconds > SECONDS_PER:
+                can_deal_cnt += self.hold_prices[i]["stock_cnt"]
+                if can_deal_cnt >= stock_cnt:
+                    return stock_cnt
+
+        return can_deal_cnt
+    '''
+        process hold 
+    '''
+    def deal_stock(self, now_time, stock_cnt, is_buy = True):
+        if is_buy :
+            hold_price = dict([("deal_time", now_time), ("stock_cnt", stock_cnt)])
+            self.hold_prices.append(hold_price)
+            return 0
+        else:
+            dealed_cnt = 0
+            for i in range(len(self.hold_prices)):
+                if (now_time - self.hold_prices[i]["deal_time"]).seconds > SECONDS_PER:
+                    if dealed_cnt < stock_cnt:
+                        diff = stock_cnt - dealed_cnt
+                        if self.hold_prices[i]["stock_cnt"] > diff:
+                            self.hold_prices[i]["stock_cnt"] -= diff
+                            dealed_cnt += diff
+                        else:
+                            dealed_cnt += self.hold_prices[i]["stock_cnt"]
+                            self.hold_prices[i]["stock_cnt"] = 0
+                    else:
+                        break
+            for i in range(len(self.hold_prices) - 1, -1, -1):
+                if self.hold_prices[i]["stock_cnt"] == 0:
+                    self.hold_prices.pop(i)
+            return dealed_cnt
+
 
     def cal_ladder_hold(self):
         price_ladder = np.zeros(BASE_PRICE_LADDER * 2)
@@ -96,12 +139,17 @@ class Martin:
     def run(self):
         a = self.account
 
-    def cal_buy_cnt(self, now_price):
 
+    # def cal_base_price(self):
+    #     for hold_share in self.hold_shares:
+    #         if hold_share
+
+
+    def cal_buy_cnt(self, now_price):
         return ((int)(TRADE_PRICE_MIN / now_price / HOLD) + 1) * HOLD
 
 
-    def order(self, stock_code, now_price, stock_cnt = 0, is_buy = True):
+    def order(self, hold_share, now_price, stock_cnt = 0, is_buy = True):
         if is_buy:
             if stock_cnt == 0:
                 stock_cnt = self.cal_buy_cnt(now_price)
@@ -112,9 +160,12 @@ class Martin:
             if cost + trade_fee > self.account.remain:
                 return Deal(0, 0)
             #下单 todo
+            hold_share.deal_stock(dt.datetime.now(), stock_cnt)
             return Deal(now_price, stock_cnt)
         else:
+            deal_cnt = hold_share.cal_can_deal(dt.datetime.now(), stock_cnt)
             #下单 todo
+            hold_share.deal_stock(dt.datetime.now(), deal_cnt, False)
             return Deal(now_price, stock_cnt, False)
 
     def ladder_trade(self):
@@ -127,26 +178,18 @@ class Martin:
             for ladder in hold_share.ladder_holds:
                 if ladder.stock_cnt == 0:
                     if ladder.ladder_price > now_price:
-                        deal = self.order(hold_share.stock_code, now_price)
+                        deal = self.order(hold_share, now_price)
                         ladder.buy_price = deal.price
                         ladder.stock_cnt = deal.stock_cnt
-                        ladder.deal_time = dt.datetime.now()
                         ladder.buy_time = dt.datetime.now()
                         self.update_hold_share(hold_share, deal)
 
-                elif now_price < ladder.buy_price * (1 + 0.001 * self.profit_rate):
-                    continue
-
-                if (dt.datetime.now() - ladder.deal_time).seconds < SECONDS_PER:
-                    #规避n+1
-                    for temp in hold_share.ladder_holds:
-                        if temp.stock_cnt == ladder.stock_cnt and (dt.datetime.now() - temp.deal_time).seconds > SECONDS_PER:
-                            temp.deal_time = ladder.deal_time
-                    deal = self.order(hold_share.stock_code, now_price, ladder.stock_cnt, False)
+                elif now_price > ladder.buy_price * (1 + 0.001 * self.profit_rate):
+                    hold_share.deal_stock()
+                    deal = self.order(hold_share, now_price, ladder.stock_cnt, False)
                     deal.buy_price = ladder.buy_price
                     ladder.buy_price = 0
                     ladder.stock_cnt -= deal.stock_cnt
-                    ladder.deal_time = dt.datetime.now()
                     ladder.buy_time = dt.datetime.now()
                     self.update_hold_share(hold_share, deal)
 
