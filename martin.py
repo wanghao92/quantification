@@ -1,5 +1,6 @@
 import numpy as np
 import datetime as dt
+import time
 
 BASE_PRICE_LADDER = 100     # 阶梯数
 SECONDS_PER = (24 * 3600)     #
@@ -7,19 +8,6 @@ TRADE_FEE_RATE = 0.0001         #手续费
 TRADE_FEE_MIN = 5               #最低手续费
 TRADE_PRICE_MIN = 10000         #单次最低交易价格
 HOLD = 100                      #一手100股
-class Account:
-
-    def __init__(self, init_money, total_money, remain, cost, profit,
-                 market_value, trade_cnt, suc_cnt, total_profit):
-        self.init_money = init_money
-        self.total_money = total_money
-        self.remain = remain
-        self.cost = cost
-        self.profit = profit
-        self.market_value = market_value
-        self.trade_cnt = trade_cnt
-        self.suc_cnt = suc_cnt
-        self.total_profit = total_profit
 
 
 #阶梯数组，单个价格阶梯
@@ -122,32 +110,44 @@ class Deal:
 
 class Martin:
 
-    def __init__(self, account, hold_shares, period = 60, profit_rate = 10, is_persistence = False):
+    def __init__(self, account, hold_shares, period = 60, profit_rate = 10, is_persistence = False, is_back_test = True):
         """
             period:策略运行周期，单位s
             profit_rate:卖出时收益率，当达到该收益率时卖出，单位0.1%，默认涨1%卖出
             account:本次策略运行的账号信息
             hold_shares:详细持仓数组
             is_persistence：策略运行过程中是否进行持久化，实时运行时必须ture
+            is_back_test:是否是回测
+            time_now:当前时间，实时：返回当前时刻 回测:返回历史时刻
         """
         self.profit_rate = profit_rate
         self.account = account
         self.hold_shares = hold_shares
         self.period = period
         self.is_persistence = is_persistence
+        self.is_back_test = is_back_test
+        self.time_now = dt.datetime.now()
+
+    def get_time_now(self):
+        if self.is_back_test:
+            return self.time_now
+        else:
+            return dt.datetime.now()
+
+    def set_time_now(self, time_now):
+        self.time_now = time_now
 
     def run(self):
-        a = self.account
+        while(True):
+            self.ladder_trade()
+            time.sleep(self.period)
 
 
     # def cal_base_price(self):
     #     for hold_share in self.hold_shares:
     #         if hold_share
-
-
     def cal_buy_cnt(self, now_price):
         return ((int)(TRADE_PRICE_MIN / now_price / HOLD) + 1) * HOLD
-
 
     def order(self, hold_share, now_price, stock_cnt = 0, is_buy = True):
         if is_buy:
@@ -160,12 +160,12 @@ class Martin:
             if cost + trade_fee > self.account.remain:
                 return Deal(0, 0)
             #下单 todo
-            hold_share.deal_stock(dt.datetime.now(), stock_cnt)
+            hold_share.deal_stock(self.get_time_now(), stock_cnt)
             return Deal(now_price, stock_cnt)
         else:
-            deal_cnt = hold_share.cal_can_deal(dt.datetime.now(), stock_cnt)
+            deal_cnt = hold_share.cal_can_deal(self.get_time_now(), stock_cnt)
             #下单 todo
-            hold_share.deal_stock(dt.datetime.now(), deal_cnt, False)
+            hold_share.deal_stock(self.get_time_now(), deal_cnt, False)
             return Deal(now_price, stock_cnt, False)
 
     def ladder_trade(self):
@@ -181,7 +181,7 @@ class Martin:
                         deal = self.order(hold_share, now_price)
                         ladder.buy_price = deal.price
                         ladder.stock_cnt = deal.stock_cnt
-                        ladder.buy_time = dt.datetime.now()
+                        ladder.buy_time = self.get_time_now()
                         self.update_hold_share(hold_share, deal)
 
                 elif now_price > ladder.buy_price * (1 + 0.001 * self.profit_rate):
@@ -190,7 +190,7 @@ class Martin:
                     deal.buy_price = ladder.buy_price
                     ladder.buy_price = 0
                     ladder.stock_cnt -= deal.stock_cnt
-                    ladder.buy_time = dt.datetime.now()
+                    ladder.buy_time = self.get_time_now()
                     self.update_hold_share(hold_share, deal)
 
     def update_hold_share(self, hold_share, deal):
