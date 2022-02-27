@@ -1,16 +1,4 @@
-import jqdatasdk as jq
-
-
-if __name__ == '__main__':
-    jq.auth('18382205937', 'Wanghao123!')
-    # 查询当天剩余可调用条数
-    count = jq.get_query_count()
-    print(count)
-
-    print(jq.normalize_code(['512800']))
-
-
-'''
+-- 创建聚宽的信息表
 create table IF NOT EXISTS `security_info`(
     `stock_code` varchar(64) ,
     `display_name` varchar(64) not null comment '中文名称',
@@ -20,4 +8,3 @@ create table IF NOT EXISTS `security_info`(
     `end_date` datetime comment '退市日期，如果没有退市则为2200-01-01',
     primary key (`stock_code`)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8;
-'''
