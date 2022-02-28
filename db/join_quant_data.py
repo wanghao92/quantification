@@ -1,19 +1,19 @@
 import datetime
-
 import jqdatasdk as jq
-import pandas as pd
+import time
+
 import db.mysql_utils as mysql
 import conf.env as env
 
 CREATE_BAR_SQL = "create table IF NOT EXISTS `{}`(" \
                  "`date_time` datetime comment '日期'," \
-                 "`open` int comment '开盘'," \
+                 "`open` int comment '开盘(unit:1分)'," \
                  "`close` int comment '收盘'," \
                  "`low` int comment '最低价'," \
                  "`high` int  comment '最高价'," \
-                 "`volume` int comment '成交数'," \
+                 "`volume` int comment '成交数(unit:1股)'," \
                  "`money` int comment '成交金额'," \
-                 "key index_date_time (`date_time`)" \
+                 "unique key index_date_time (`date_time`)" \
                  ")ENGINE=InnoDB DEFAULT CHARSET=utf8;"
 
 '''
@@ -71,35 +71,73 @@ BAR_COUNT_PER_DAY = 4 * 60  #分钟级行情数量，每天交易4个小时
                 False:增量更新，计算表中数据日期的范围，和需要更新的范围，只更新不包含的日期范围
 '''
 def price_bar_update(db, stock_code, start, end, unit = '1m', force_update = False):
-    units = {
-        '1m'   : 60,
-        '5m'   : 60*5,
-        '15m'  : 60*15,
-        '30m'  : 60*30,
-        '60'   : 60*60,
-        '12m'  : 60*60*2,
-        '1d'   : 60*60*4,
-    }
-    count = (int)((end - start).seconds / units.get(unit)) + 1
-
-    table_name = stock_code.replace('.', '_')
+    # count = cal_sampling_count(start, end, unit)
+    table_name = 'jq_' + stock_code.replace('.', '_')
     cur = db.cursor()
     cur.execute(CREATE_BAR_SQL.format(table_name))
+    date_cur = end
+    while True:
+        #默认每次获取30天数据
+        df = jq.get_bars(stock_code, 240 * 30, '1m', ['date', 'open', 'close', 'low', 'high', 'volume', 'money'], False, date_cur)
+        bars_infos = ((row['date'], int(row['open'] * 100), int(row['close'] * 100), int(row['low'] * 100),
+                       int(row['high'] * 100), int(row['volume']), int(row['money'])) for index, row in df.iterrows())
+        if df.iloc[0].date < start:
+            break
+        else :
+            date_cur = df.iloc[0].date
+        # bars_infos = []
+        # for index, row in df.iterrows():
+        #     bars_infos.append((row['date'], int(row['open'] * 100), int(row['close'] * 100), int(row['low'] * 100),
+        #                int(row['high'] * 100), int(row['volume']), int(row['money'])))
+        # print(bars_infos[0])
 
-    df = jq.get_bars(stock_code, count, '1m', ['date', 'open', 'close', 'low', 'high', 'volume', 'money'], False, end)
-    bars_infos = ((row['date'] * 100, row['open'] * 100, row['close'] * 100, row['low'] * 100, row['high'] * 100, row['volume'], row['money']) for row in df.iterrows())
-    ins = "replace into {} (`date_time`, `open`, `close` `low`, `high`, `volume`, `money`)" \
-          " values (%s, %s, %s, %s, %s, %s, %s)"
-    try:
-        cur.executemany(ins, tuple(map(int, bars_infos)))
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        print("execte sql:'{}' error".format(ins))
-        print(repr(e))
-    finally:
-        cur.close()
+        ins = "replace into `{}` (`date_time`, `open`, `close`, `low`, `high`, `volume`, `money`)" \
+              " values (%s, %s, %s, %s, %s, %s, %s)".format(table_name)
+        try:
+            print('query total {}; start updating....'.format(df.shape))
+            quert_time_dot = time.time()
+            cur.executemany(ins, bars_infos)
+            db.commit()
+            print('update end, cost time {} s...'.format(time.time() - quert_time_dot))
 
+        except Exception as e:
+            db.rollback()
+            print("execte sql:'{}' error".format(ins))
+            print(repr(e))
+    cur.close()
+
+def cal_sampling_count(start, end, unit = '1m'):
+    units = {
+        '1m': 60,
+        '5m': 60 * 5,
+        '15m': 60 * 15,
+        '30m': 60 * 30,
+        '60': 60 * 60,
+        '12m': 60 * 60 * 2,
+        '1d': 60 * 60 * 4,
+    }
+    # ---[9:30:00 ~ 11:30:00]----[13:00:00 ~ 15:00:00]
+    start_up_start = datetime.datetime(start.year, start.month, start.day, 9, 30, 0)
+    start_up_end = datetime.datetime(start.year, start.month, start.day, 11, 30, 0)
+    start_down_start = datetime.datetime(start.year, start.month, start.day, 13, 0, 0)
+    start_down_end = datetime.datetime(start.year, start.month, start.day, 15, 0, 0)
+
+    # todo
+    if start.year == end.year and start.month == end.month and start.day == end.day:
+        if end < start_up_start or start > start_down_end or (start > start_up_end and end < start_down_start):
+            return 0
+    end_span = time.mktime(end.timetuple())
+    start_span = time.mktime(start.timetuple())
+
+    return (int)((end_span - start_span) / units.get(unit)) + 1
+
+
+'''
+#####################################################################################
+#######################  start   桩函数   start    ###################################
+#######################  start   桩函数   start    ###################################
+#####################################################################################
+'''
 
 # 查询当天剩余可查询次数
 def stub_query_reamin_count():
@@ -119,17 +157,27 @@ def stub_update_all_security_info():
     security_info_update(db)
     db.close()
 
-# 更新行情信息
+
+'''
+    更新历史行情信息
+    600900.XSHG:长江电力
+    601398.XSHG:工商银行
+    512800.XSHG:银行etf
+    399380.XSHE:国证etf
+    159931.XSHE:金融etf
+    513050.XSHG:中概互联
+'''
 def stub_update_bar():
     jq.auth(env.JOIN_QUANT_USER, env.JOIN_QUANT_PSWD)
 
     db = mysql.connect(env.PC_LOCAL_MYSQL_HOST, env.PC_LOCAL_MYSQL_PORT, env.PC_LOCAL_MYSQL_USER,
                        env.PC_LOCAL_MYSQL_PSWD,
                        env.PC_LOCAL_MYSQL_DB)
-    price_bar_update(db, '000001.XSHE', datetime.datetime(2022, 2, 24, 9, 30, 0), datetime.datetime(2022, 2, 24, 16, 30, 0))
-
+    price_bar_update(db, '159931.XSHE', datetime.datetime(2014, 2, 15, 16, 30, 0), datetime.datetime(2022, 2, 25, 16, 30, 0))
+    db.close()
 
 if __name__ == '__main__':
+     # stub_query_reamin_count()
 
     # stub_update_all_security_info()
 

@@ -1,9 +1,10 @@
 import pymysql
 import conf.env as env
 
+
 def connect(localhost, port, user, pswd, dbName):
     try:
-        db = pymysql.connect(host = localhost, port = port, user = user, password = pswd, database = dbName)
+        db = pymysql.connect(host = localhost, port = port, user = user, password = pswd, database = dbName, cursorclass = pymysql.cursors.DictCursor)
         print("connect mysql[host:{}, port:{}] success!".format(localhost, port))
     except Exception:
         raise Exception("connect mysql error")

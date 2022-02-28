@@ -1,13 +1,13 @@
 -- 分钟/日行情
 create table IF NOT EXISTS `zzmt`(
     `date_time` datetime comment '日期',
-    `open` int comment '开盘 unit：分',
+    `open` int comment '开盘 unit：1分',
     `close` int comment '收盘',
     `low` int comment '最低价',
     `high` int  comment '最高价',
-    `volume` int comment '成交数 unit：手',
-    `money` int comment '成交金额 unit：元',
-    key index_date_time (`date_time`)
+    `volume` int comment '成交数 unit：1股',
+    `money` int comment '成交金额 unit：1元',
+    unique key index_date_time (`date_time`)
 )ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 
