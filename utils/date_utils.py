@@ -1,7 +1,7 @@
 import datetime
 import time
 import numpy as np
-import utils.trade_date as trd
+import trade_date as trd
 # 获取时间戳秒
 def get_sec_stamp(now_time=None):
     if now_time == None:
