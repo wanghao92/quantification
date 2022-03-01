@@ -23,7 +23,7 @@ class JoinQuantSimulate(TradeUtils):
             价格列表，默认返回10个[(price, count)]
             前5个是买单报价，后5个是卖单报价，价格依次升高
             price:unit(1分)
-            count:unit(1手)
+            count:unit(1股)
     '''
     def get_price(self, stock_code, now_time = None):
 
@@ -40,7 +40,7 @@ class JoinQuantSimulate(TradeUtils):
                 return None
             result = []
             diff_price = int((data['high'] - data['low']) / 10)
-            diff_count = int(data['volume'] / 100 / 10)
+            diff_count = int(data['volume'] / 10)
             for i in range(10):
                 result.append((data['low'] + i * diff_price, diff_count))
             return result
@@ -56,17 +56,17 @@ class JoinQuantSimulate(TradeUtils):
         发出交易指令
         @:param
         price:价格(unit:分)
-        count:数量（unit:手)
+        count:数量（unit:股)
         is_buy: true买， FALSE卖
         now_time: 不传为当前时间
         @:return
-        (price, count)：(实际买/卖价格(unit:分)，实际买/卖数量(unit:手)
+        (price, count)：(实际买/卖价格(unit:分)，实际买/卖数量(unit:股)
     '''
     def order(self, stock_code, price, count, is_buy = True, now_time = None):
 
         t_price = 0
         t_count = 0
-
+        count = int(count / 100 * 100)
         if now_time == None:
             now_time = datetime.datetime.now()
 

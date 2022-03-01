@@ -166,6 +166,7 @@ def stub_update_all_security_info():
     399380.XSHE:国证etf
     159931.XSHE:金融etf
     513050.XSHG:中概互联
+    510210.XSHG:综证etf   走势类似上证指数
 '''
 def stub_update_bar():
     jq.auth(env.JOIN_QUANT_USER, env.JOIN_QUANT_PSWD)
@@ -173,7 +174,7 @@ def stub_update_bar():
     db = mysql.connect(env.PC_LOCAL_MYSQL_HOST, env.PC_LOCAL_MYSQL_PORT, env.PC_LOCAL_MYSQL_USER,
                        env.PC_LOCAL_MYSQL_PSWD,
                        env.PC_LOCAL_MYSQL_DB)
-    price_bar_update(db, '159931.XSHE', datetime.datetime(2014, 2, 15, 16, 30, 0), datetime.datetime(2022, 2, 25, 16, 30, 0))
+    price_bar_update(db, '510210.XSHG', datetime.datetime(2012, 2, 15, 16, 30, 0), datetime.datetime(2022, 2, 25, 16, 30, 0))
     db.close()
 
 if __name__ == '__main__':
