@@ -24,22 +24,25 @@ class LadderHold:
 # 单一股票持仓
 class HoldShare:
 
-    def __init__(self, stock_code, stock_name, create_time=None, stock_cnt=0, price=0,
-                 profit=0, trade_cnt=0, suc_cnt=0, end_time=None, base_price=0, ladder_rate=1):
+    def __init__(self, stock_code, stock_name, base_price=0, stock_cnt=0, price=0, ladder_rate=10,
+                 profit=0, trade_cnt=0, suc_cnt=0):
         self.stock_code = stock_code
         self.stock_name = stock_name
-        self.create_time = create_time  # 建仓时间
+        self.create_time = None  # 建仓时间
         self.stock_cnt = stock_cnt  # 持仓数量
-        self.price = price  # 持仓价格
+        self.price = price  # 持仓价格(unit:1分)
         self.profit = profit  # 持仓利润
         self.trade_cnt = trade_cnt  # 交易次数
         self.suc_cnt = suc_cnt  # 成功次数
-        self.end_time = end_time  # 平仓时间
+        self.end_time = None  # 平仓时间
         self.base_price = base_price  # 基准价格
-        self.ladder_rate = ladder_rate  # 阶梯利率
+        self.ladder_rate = ladder_rate  # 阶梯利率(unit:0.1%)
         self.ladder_holds = self.cal_ladder_hold()  # 生成价格阶梯数组
         self.hold_prices = []  # (deal_time: ,stock_cnt: )
 
+    def update_ladder(self, ladder_rate):
+        self.ladder_rate = ladder_rate
+        self.ladder_holds = self.cal_ladder_hold()
     '''
         cal can be dealed
         规避n+1
@@ -132,6 +135,9 @@ class Martin:
         self.time_now = dt.datetime.now()
         self.trade_utils = trade_utils
 
+    def __str__(self):
+        return self.account.to_string()
+
     def get_time_now(self):
         if self.is_back_test:
             return self.time_now
@@ -141,9 +147,9 @@ class Martin:
     def set_time_now(self, time_now):
         self.time_now = time_now
 
-    def run(self):
+    def loop_run(self):
         while (True):
-            self.ladder_trade()
+            self.run()
             time.sleep(self.period)
 
     # def cal_base_price(self):
@@ -174,9 +180,11 @@ class Martin:
                 hold_share.deal_stock(self.get_time_now(), deal_cnt, False)
             return Deal(now_price, stock_cnt, False)
 
-    def ladder_trade(self):
+
+
+    def run(self):
         for hold_share in self.hold_shares:
-            if (hold_share.stock_cnt == 0) or (hold_share.create_time is None):
+            if hold_share.stock_cnt == 0:
                 continue
 
             price_list = self.trade_utils.get_price(hold_share.stock_code, self.get_time_now())
