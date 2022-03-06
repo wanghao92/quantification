@@ -19,6 +19,7 @@ class JoinQuantSimulate(TradeUtils):
 
     def __init__(self, db):
         self.db = db
+        self.cache = None
 
     '''
         @:return
@@ -101,7 +102,7 @@ class JoinQuantSimulate(TradeUtils):
         if t_count == 0:
             return 0, 0
         else:
-            return int(t_price / t_count), t_count
+            return t_price / t_count, t_count
 
 
 def stub_jq_simulat_get_price():

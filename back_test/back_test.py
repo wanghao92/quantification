@@ -15,7 +15,7 @@ def martin_jq():
                        env.PC_LOCAL_MYSQL_DB)
 
     #配置交易时间
-    start_date = datetime.datetime(2016, 1, 1)
+    start_date = datetime.datetime(2018, 1, 1)
     end_date = datetime.datetime(2022, 1, 1)
     time_generator = du.DealTimeGenerator(start_date, end_date)
 
@@ -27,15 +27,15 @@ def martin_jq():
 
     #配置持仓
     hold_shares = []
-    hold_share_512800 = mrt.HoldShare('512800.XSHG', '银行etf', 118)
+    hold_share_512800 = mrt.HoldShare('512800.XSHG', '银行etf', 1.18)
     hold_shares.append(hold_share_512800)
 
     #配置dot
-    back_test_info = rd.BackTestInfo(db, 'martin', start_date, end_date, account, '', 0)
+    back_test_info = rd.BackTestInfo('martin', start_date, end_date, account, '', 0)
     dot = rd.dot_utils(db, back_test_info)
 
     #配置策略
-    martin = mrt.Martin(account, hold_shares, trade)
+    martin = mrt.Martin(account, hold_shares, trade, dot)
 
     #交易loop
     now_time = time_generator.generate()

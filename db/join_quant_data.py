@@ -139,7 +139,7 @@ def cal_sampling_count(start, end, unit = '1m'):
 '''
 
 # 查询当天剩余可查询次数
-def stub_query_reamin_count():
+def stub_query_remain_count():
     jq.auth(env.JOIN_QUANT_USER, env.JOIN_QUANT_PSWD)
     count = jq.get_query_count()
     print(count)
@@ -177,7 +177,7 @@ def stub_update_bar():
     db.close()
 
 if __name__ == '__main__':
-     stub_query_reamin_count()
+     stub_query_remain_count()
 
     # stub_update_all_security_info()
 

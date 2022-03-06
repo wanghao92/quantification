@@ -1,6 +1,7 @@
 import datetime
-
+import db.mysql_utils as mysql
 import model.account as ac
+import conf.env as env
 import uuid
 
 CREATE_BASIC_TEST_INFO_SQL = "create table IF NOT EXISTS `back_test_info`(" \
@@ -74,9 +75,17 @@ class RealCountDot:
 
 class dot_utils:
 
-    def __init__(self, db, back_test_info):
+    '''
+        :param
+            sample:记录模式
+                0:当变化是记录
+                >0:每调用sample次记录一次
+    '''
+    def __init__(self, db, back_test_info, sample=1):
         self.db = db
         self.back_test_info = back_test_info
+        self.sample = sample
+        self.dot_count = 0
         ins = "insert into back_test_info (`id`, `strategy`, `name`, `test_time`, `start_time`, " \
               "`end_time`, `init_money`, `total_money`, `remain`, `profit`, `market_value`, " \
               "`trade_cnt`, `suc_cnt`, `total_profit`, `table_index`, `description`) " \
@@ -84,9 +93,9 @@ class dot_utils:
         cur = self.db.cursor()
 
         try:
-            cur.execute(ins, (back_test_info.id, back_test_info.strategy, back_test_info.name, back_test_info.test,
+            cur.execute(ins, (back_test_info.id, back_test_info.strategy, back_test_info.name, back_test_info.test_time,
                               back_test_info.start_time, back_test_info.end_time, back_test_info.init_money,
-                              back_test_info.total_money, back_test_info.reamin, back_test_info.profit,
+                              back_test_info.total_money, back_test_info.remain, back_test_info.profit,
                               back_test_info.market_value, back_test_info.trade_cnt, back_test_info.suc_cnt,
                               back_test_info.total_profit, back_test_info.table_index, back_test_info.description))
             db.commit()
@@ -99,8 +108,8 @@ class dot_utils:
 
     def deal_dot(self, stock_code, stock_name, stock_cnt, price, is_buy=True):
 
-        ins = "insert into deal_dot_{} (`id`, `back_test_info_id`, `stock_name`, `stock_cnt`, `deal_time`,`price`, `is_buy`)" \
-              "values (%s, %s, %s, %s, %s, %, %s, %s)".format(self.back_test_info.table_index)
+        ins = "insert into deal_dot_{} (`id`, `back_test_info_id`, `stock_code`, `stock_name`, `stock_cnt`, `deal_time`,`price`, `is_buy`)" \
+              "values (%s, %s, %s, %s, %s, %s, %s, %s)".format(self.back_test_info.table_index)
         cur = self.db.cursor()
         try:
             cur.execute(ins, (uuid.uuid4(), self.back_test_info.id, stock_code, stock_name, stock_cnt, datetime.datetime.now(), price, is_buy))
@@ -113,6 +122,15 @@ class dot_utils:
             cur.close()
 
     def real_count_dot(self, total_money, remain, market_value, profit):
+
+        # if self.sample == 0:
+        #     if self.pre_count is not None and self.pre_count.total_money == total_money \
+        #         and self.pre_count.remain == remain
+
+        self.dot_count += 1
+        if self.dot_count % self.sample != 0:
+            return
+
         ins = "insert into real_count_dot_{} (`id`, `back_test_info_id`, `total_money`, `remain`, `market_value`, `money_rate`, `yield_rate`, `profit`)" \
               "values (%s, %s, %s, %s, %s, %s, %s, %s)".format(self.back_test_info.table_index)
         cur = self.db.cursor()
@@ -127,5 +145,23 @@ class dot_utils:
         finally:
             cur.close()
 
+def dot_test():
+    db = mysql.connect(env.PC_LOCAL_MYSQL_HOST, env.PC_LOCAL_MYSQL_PORT, env.PC_LOCAL_MYSQL_USER,
+                       env.PC_LOCAL_MYSQL_PSWD,
+                       env.PC_LOCAL_MYSQL_DB)
+
+    start_date = datetime.datetime(2016, 1, 1)
+    end_date = datetime.datetime(2022, 1, 1)
+
+    #配置起始资金
+    account = ac.Account(1000000.0, 1000000.0, 1000000.0)
+
+
+    #配置dot
+    back_test_info = BackTestInfo('martin', start_date, end_date, account, '')
+    dot = dot_utils(db, back_test_info)
+    dot.deal_dot('0001234.XETE', 'test compain', 200, 100.1)
+    dot.real_count_dot(2000000, 122.0, 123523, 2356.0)
+
 if __name__ == '__main__':
-    print(uuid.uuid4())
+    dot_test()

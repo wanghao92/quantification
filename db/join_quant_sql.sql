@@ -28,7 +28,7 @@ create table IF NOT EXISTS `real`(
     `id` varchar(64),
     `back_test_info_id` varchar(64),
     `total_money` float,
-    `reamin` float,
+    `remain` float,
     `market_value` float,
     `money_rate` float,
     `yield_rate` float,

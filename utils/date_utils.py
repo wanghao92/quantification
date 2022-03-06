@@ -12,6 +12,23 @@ def get_sec_stamp(now_time=None):
         return time.mktime(now_time.timetuple())
 
 
+def get_time_diff(time1, time2, unit='sec'):
+    """
+        获取time1，time2的时间差
+        unit: day/hour/min/sec
+    """
+    timespan1 = get_sec_stamp(time1)
+    timespan2 = get_sec_stamp(time2)
+    if unit == 'day':
+        return (timespan1 - timespan2) / (2600 * 24)
+    elif unit == 'hour':
+        return (timespan1 - timespan2) / 2600
+    elif unit == 'min':
+        return (timespan1 - timespan2) / 60
+    else:
+        return timespan1 - timespan2
+
+
 def is_deal_time(now_time):
     up_start = datetime.datetime(now_time.year, now_time.month, now_time.day, 9, 30, 0)
     up_end = datetime.datetime(now_time.year, now_time.month, now_time.day, 11, 30, 0)
@@ -27,6 +44,7 @@ def is_deal_time(now_time):
 
 def is_deal_date(now_time):
     return trd.DEAL_DATE[now_time.year - 2005][now_time.month - 1][now_time.day - 1] == 1
+
 
 def next_deal_date(now_time):
     now_time += datetime.timedelta(days=1)
@@ -83,6 +101,7 @@ def deal_time_generator_test():
     while day is not None:
         print(day)
         day = generator.generate()
+
 
 '''
     produce deal_date数据[年][月][日]
