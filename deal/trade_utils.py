@@ -2,6 +2,10 @@ import datetime
 import db.mysql_utils as mysql
 import conf.env as env
 
+TRADE_FEE_RATE = 0.0001  # 手续费
+TRADE_FEE_MIN = 5  # 最低手续费
+
+
 class TradeUtils:
 
     def get_price(self, now_time):
@@ -9,8 +13,6 @@ class TradeUtils:
 
     def order(self):
         pass
-
-
 
 
 class JoinQuantSimulate(TradeUtils):
@@ -25,7 +27,8 @@ class JoinQuantSimulate(TradeUtils):
             price:unit(1分)
             count:unit(1股)
     '''
-    def get_price(self, stock_code, now_time = None):
+
+    def get_price(self, stock_code, now_time=None):
 
         if now_time == None:
             now_time = datetime.datetime.now()
@@ -62,7 +65,8 @@ class JoinQuantSimulate(TradeUtils):
         @:return
         (price, count)：(实际买/卖价格(unit:分)，实际买/卖数量(unit:股)
     '''
-    def order(self, stock_code, price, count, is_buy = True, now_time = None):
+
+    def order(self, stock_code, price, count, is_buy=True, now_time=None):
 
         t_price = 0
         t_count = 0
@@ -101,7 +105,6 @@ class JoinQuantSimulate(TradeUtils):
 
 
 def stub_jq_simulat_get_price():
-
     db = mysql.connect(env.PC_LOCAL_MYSQL_HOST, env.PC_LOCAL_MYSQL_PORT, env.PC_LOCAL_MYSQL_USER,
                        env.PC_LOCAL_MYSQL_PSWD,
                        env.PC_LOCAL_MYSQL_DB)
@@ -112,7 +115,6 @@ def stub_jq_simulat_get_price():
 
 
 def stub_jq_simulat_order():
-
     db = mysql.connect(env.PC_LOCAL_MYSQL_HOST, env.PC_LOCAL_MYSQL_PORT, env.PC_LOCAL_MYSQL_USER,
                        env.PC_LOCAL_MYSQL_PSWD,
                        env.PC_LOCAL_MYSQL_DB)
@@ -130,10 +132,12 @@ def stub_jq_simulat_order():
     print(data)
     data1 = trade.order('512800.XSHG', 119, 10000 - data[1], False, datetime.datetime(2022, 2, 25, 14, 43, 0))
     print(data1)
-    data2 = trade.order('512800.XSHG', 117, 10000 - data[1] - data1[1], False, datetime.datetime(2022, 2, 25, 14, 43, 0))
+    data2 = trade.order('512800.XSHG', 117, 10000 - data[1] - data1[1], False,
+                        datetime.datetime(2022, 2, 25, 14, 43, 0))
     print(data2)
     db.close()
 
+
 if __name__ == '__main__':
     # stub_jq_simulat_get_price()
-     stub_jq_simulat_order()
+    stub_jq_simulat_order()

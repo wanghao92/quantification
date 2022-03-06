@@ -4,8 +4,6 @@ import time
 
 BASE_PRICE_LADDER = 100  # 阶梯数
 SECONDS_PER = (24 * 3600)  #
-TRADE_FEE_RATE = 0.0001  # 手续费
-TRADE_FEE_MIN = 5  # 最低手续费
 TRADE_PRICE_MIN = 10000  # 单次最低交易价格
 HOLD = 100  # 一手100股
 
@@ -29,7 +27,8 @@ class HoldShare:
         self.stock_code = stock_code
         self.stock_name = stock_name
         self.create_time = None  # 建仓时间
-        self.stock_cnt = stock_cnt  # 持仓数量
+        self.temp_price = 0     #实时价格缓存
+        self.stock_cnt = stock_cnt  # 持仓数量(unit:股)
         self.price = price  # 持仓价格(unit:1分)
         self.profit = profit  # 持仓利润
         self.trade_cnt = trade_cnt  # 交易次数
@@ -115,7 +114,7 @@ class Deal:
 
 class Martin:
 
-    def __init__(self, account, hold_shares, trade_utils, profit_rate=10, period=60, is_persistence=False,
+    def __init__(self, account, hold_shares, trade_utils, dot_utils, profit_rate=10, period=60, is_persistence=False,
                  is_back_test=True):
         """
             period:策略运行周期，单位s
@@ -134,6 +133,7 @@ class Martin:
         self.is_back_test = is_back_test
         self.time_now = dt.datetime.now()
         self.trade_utils = trade_utils
+        self.dot_utils = dot_utils
 
     def __str__(self):
         return self.account.to_string()
@@ -169,8 +169,10 @@ class Martin:
             result = self.trade_utils.order(hold_share.stock_code,
                                             now_price, stock_cnt, True, self.get_time_now())
             if result[0] != 0 and result[1] != 0:
-                hold_share.deal_stock(self.get_time_now(), stock_cnt)
-            return Deal(now_price, stock_cnt)
+                hold_share.deal_stock(self.get_time_now(), result[1])
+                self.dot_utils.deal_dot(hold_share.stock_code, hold_share.stock_name,
+                                        result[1], result[0])
+            return Deal(result[0], result[1])
         else:
             deal_cnt = hold_share.cal_can_deal(self.get_time_now(), stock_cnt)
 
@@ -178,19 +180,18 @@ class Martin:
                                             now_price, stock_cnt, False, self.get_time_now())
             if result[0] != 0 and result[1] != 0:
                 hold_share.deal_stock(self.get_time_now(), deal_cnt, False)
-            return Deal(now_price, stock_cnt, False)
-
+                self.dot_utils.deal_dot(hold_share.stock_code, hold_share.stock_name,
+                                        result[1], result[0], False)
+            return Deal(result[0], result[1], False)
 
 
     def run(self):
         for hold_share in self.hold_shares:
-            if hold_share.stock_cnt == 0:
-                continue
 
             price_list = self.trade_utils.get_price(hold_share.stock_code, self.get_time_now())
             if price_list is None:
                 return
-
+            hold_share.temp_price = price_list[5][0]
             for ladder in hold_share.ladder_holds:
                 if ladder.stock_cnt == 0:   # buy
                     if price_list[7][0] >= ladder.ladder_price >= price_list[5][0]:
@@ -207,6 +208,17 @@ class Martin:
                     ladder.stock_cnt -= deal.stock_cnt
                     ladder.buy_time = self.get_time_now()
                     self.update_hold_share(hold_share, deal)
+
+    def update_account_info(self):
+        market_value = 0
+        for hold_share in self.hold_shares:
+            market_value += hold_share.stock_cnt * hold_share.temp_price
+        self.account.market_value = market_value
+        self.account.total_money = self.account.remain + market_value
+        self.account.total_profit = self.account.total_money - self.account.init_money
+        self.account.yield_rate = self.account.total_profit / self.account.init_money
+        self.dot_utils.real_count_dot(self.account.total_money, self.account.remain,
+                                      self.account.market_value, self.account.total_profit)
 
     def update_hold_share(self, hold_share, deal):
         cost = deal.price * deal.stock_cnt

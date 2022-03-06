@@ -7,12 +7,12 @@ import conf.env as env
 
 CREATE_BAR_SQL = "create table IF NOT EXISTS `{}`(" \
                  "`date_time` datetime comment '日期'," \
-                 "`open` int comment '开盘(unit:1分)'," \
-                 "`close` int comment '收盘'," \
-                 "`low` int comment '最低价'," \
-                 "`high` int  comment '最高价'," \
+                 "`open` float comment '开盘'," \
+                 "`close` float comment '收盘'," \
+                 "`low` float comment '最低价'," \
+                 "`high` float  comment '最高价'," \
                  "`volume` int comment '成交数(unit:1股)'," \
-                 "`money` int comment '成交金额'," \
+                 "`money` float comment '成交金额'," \
                  "unique key index_date_time (`date_time`)" \
                  ")ENGINE=InnoDB DEFAULT CHARSET=utf8;"
 
@@ -79,8 +79,7 @@ def price_bar_update(db, stock_code, start, end, unit = '1m', force_update = Fal
     while True:
         #默认每次获取30天数据
         df = jq.get_bars(stock_code, 240 * 30, '1m', ['date', 'open', 'close', 'low', 'high', 'volume', 'money'], False, date_cur)
-        bars_infos = ((row['date'], int(row['open'] * 100), int(row['close'] * 100), int(row['low'] * 100),
-                       int(row['high'] * 100), int(row['volume']), int(row['money'])) for index, row in df.iterrows())
+        bars_infos = ((row['date'], row['open'], row['close'], row['low'], row['high'], row['volume'], row['money']) for index, row in df.iterrows())
         if df.iloc[0].date < start:
             break
         else :
@@ -174,12 +173,12 @@ def stub_update_bar():
     db = mysql.connect(env.PC_LOCAL_MYSQL_HOST, env.PC_LOCAL_MYSQL_PORT, env.PC_LOCAL_MYSQL_USER,
                        env.PC_LOCAL_MYSQL_PSWD,
                        env.PC_LOCAL_MYSQL_DB)
-    price_bar_update(db, '510210.XSHG', datetime.datetime(2012, 2, 15, 16, 30, 0), datetime.datetime(2022, 2, 25, 16, 30, 0))
+    price_bar_update(db, '600900.XSHG', datetime.datetime(2012, 8, 15, 16, 30, 0), datetime.datetime(2022, 2, 25, 16, 30, 0))
     db.close()
 
 if __name__ == '__main__':
-     # stub_query_reamin_count()
+     stub_query_reamin_count()
 
     # stub_update_all_security_info()
 
-    stub_update_bar()
+    # stub_update_bar()

@@ -18,3 +18,4 @@ class RealCount:
         self.yield_rate = yield_rate
         self.total_profit = total_profit
         self.deal = deal
+
