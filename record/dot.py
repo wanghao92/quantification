@@ -62,9 +62,10 @@ class DealDot:
 
 class RealCountDot:
 
-    def __init__(self, back_test_info_id, total_money, remain, market_value, money_rate, yield_rate, profit):
+    def __init__(self, back_test_info_id, date_time, total_money, remain, market_value, money_rate, yield_rate, profit):
         self.id = uuid.uuid4()
         self.back_test_info_id = back_test_info_id
+        self.date_time = date_time
         self.total_money = total_money  # total = remain + marketValue
         self.remain = remain
         self.market_value = market_value
@@ -86,6 +87,7 @@ class dot_utils:
         self.back_test_info = back_test_info
         self.sample = sample
         self.dot_count = 0
+        self.print_no = True
         ins = "insert into back_test_info (`id`, `strategy`, `name`, `test_time`, `start_time`, " \
               "`end_time`, `init_money`, `total_money`, `remain`, `profit`, `market_value`, " \
               "`trade_cnt`, `suc_cnt`, `total_profit`, `table_index`, `description`) " \
@@ -106,13 +108,16 @@ class dot_utils:
         finally:
             cur.close()
 
-    def deal_dot(self, stock_code, stock_name, stock_cnt, price, is_buy=True):
+    def deal_dot(self, stock_code, stock_name, stock_cnt, price, now_time, is_buy=True):
+
+        if self.print_no:
+            print("deal_dot:{},code:{},cnt:{},price:{},time:{},is_buy{}".format(stock_name, stock_code, stock_cnt, price, now_time, is_buy))
 
         ins = "insert into deal_dot_{} (`id`, `back_test_info_id`, `stock_code`, `stock_name`, `stock_cnt`, `deal_time`,`price`, `is_buy`)" \
               "values (%s, %s, %s, %s, %s, %s, %s, %s)".format(self.back_test_info.table_index)
         cur = self.db.cursor()
         try:
-            cur.execute(ins, (uuid.uuid4(), self.back_test_info.id, stock_code, stock_name, stock_cnt, datetime.datetime.now(), price, is_buy))
+            cur.execute(ins, (uuid.uuid4(), self.back_test_info.id, stock_code, stock_name, stock_cnt, now_time, price, is_buy))
             self.db.commit()
         except Exception as e:
             self.db.rollback()
@@ -121,7 +126,7 @@ class dot_utils:
         finally:
             cur.close()
 
-    def real_count_dot(self, total_money, remain, market_value, profit):
+    def real_count_dot(self, total_money, remain, market_value, profit, now_time):
 
         # if self.sample == 0:
         #     if self.pre_count is not None and self.pre_count.total_money == total_money \
@@ -131,11 +136,11 @@ class dot_utils:
         if self.dot_count % self.sample != 0:
             return
 
-        ins = "insert into real_count_dot_{} (`id`, `back_test_info_id`, `total_money`, `remain`, `market_value`, `money_rate`, `yield_rate`, `profit`)" \
-              "values (%s, %s, %s, %s, %s, %s, %s, %s)".format(self.back_test_info.table_index)
+        ins = "insert into real_count_dot_{} (`id`, `back_test_info_id`, `date_time`, `total_money`, `remain`, `market_value`, `money_rate`, `yield_rate`, `profit`)" \
+              "values (%s, %s, %s, %s, %s, %s, %s, %s, %s)".format(self.back_test_info.table_index)
         cur = self.db.cursor()
         try:
-            cur.execute(ins, (uuid.uuid4(), self.back_test_info.id, total_money, remain, market_value,
+            cur.execute(ins, (uuid.uuid4(), self.back_test_info.id, now_time, total_money, remain, market_value,
                               (1-remain/total_money), (total_money-self.back_test_info.init_money)/self.back_test_info.init_money, profit))
             self.db.commit()
         except Exception as e:

@@ -27,15 +27,15 @@ def martin_jq():
 
     #配置持仓
     hold_shares = []
-    hold_share_512800 = mrt.HoldShare('512800.XSHG', '银行etf', 1.18)
+    hold_share_512800 = mrt.HoldShare('512800.XSHG', '银行etf', 1.017, 0, 0, 0.005)
     hold_shares.append(hold_share_512800)
 
     #配置dot
     back_test_info = rd.BackTestInfo('martin', start_date, end_date, account, '', 0)
-    dot = rd.dot_utils(db, back_test_info)
+    dot = rd.dot_utils(db, back_test_info, 1000)
 
     #配置策略
-    martin = mrt.Martin(account, hold_shares, trade, dot)
+    martin = mrt.Martin(account, hold_shares, trade, dot, 0.005)
 
     #交易loop
     now_time = time_generator.generate()
