@@ -101,6 +101,8 @@ class JoinQuantSimulate(TradeUtils):
                         t_price += result[i][0] * (count - t_count)
                         t_count = count
                         break
+                else:
+                    break
 
         else:
             for i in range(4, -1, -1):
@@ -112,6 +114,8 @@ class JoinQuantSimulate(TradeUtils):
                         t_price += price * (count - t_count)
                         t_count = count
                         break
+                else:
+                    break
         if t_count == 0:
             return 0, 0
         else:

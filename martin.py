@@ -1,3 +1,5 @@
+import datetime
+
 import numpy as np
 import datetime as dt
 import time
@@ -6,7 +8,7 @@ import utils.date_utils as du
 BASE_PRICE_LADDER = 100  # 阶梯数
 TRADE_PRICE_MIN = 10000  # 单次最低交易价格
 HOLD = 100  # 一手100股
-
+PRINT_ON = True
 
 # 阶梯数组，单个价格阶梯
 class LadderHold:
@@ -21,7 +23,7 @@ class LadderHold:
 # 单一股票持仓
 class HoldShare:
 
-    def __init__(self, stock_code, stock_name, base_price=0, stock_cnt=0, price=0, ladder_rate=0.01,
+    def __init__(self, stock_code, stock_name, base_price=0.0, stock_cnt=0, price=0.0, ladder_rate=0.01,
                  profit=0, trade_cnt=0, suc_cnt=0):
         self.stock_code = stock_code
         self.stock_name = stock_name
@@ -62,10 +64,10 @@ class HoldShare:
     '''
 
     def deal_stock(self, now_time, stock_cnt, is_buy=True):
+        dealed_cnt = 0
         if is_buy:
             hold_price = dict([("deal_time", now_time), ("stock_cnt", stock_cnt)])
             self.hold_prices.append(hold_price)
-            return 0
         else:
             dealed_cnt = 0
             for i in range(len(self.hold_prices)):
@@ -83,7 +85,12 @@ class HoldShare:
             for i in range(len(self.hold_prices) - 1, -1, -1):
                 if self.hold_prices[i]["stock_cnt"] == 0:
                     self.hold_prices.pop(i)
-            return dealed_cnt
+        if PRINT_ON:
+            total = 0
+            for i in range(len(self.hold_prices)):
+                total += self.hold_prices[i]["stock_cnt"]
+            print("deal_stock:time:{} total:{}, stockCnt:{}, dealCnt:{}, is_buy:{}".format(now_time, total, stock_cnt, dealed_cnt, is_buy))
+        return dealed_cnt
 
     def cal_ladder_hold(self):
         price_ladder = np.zeros(BASE_PRICE_LADDER * 2)
@@ -136,7 +143,7 @@ class Martin:
         self.time_now = dt.datetime.now()
         self.trade_utils = trade_utils
         self.dot_utils = dot_utils
-        self.print_no = True
+
 
     def __str__(self):
         return self.account.to_string()
@@ -184,7 +191,7 @@ class Martin:
             result = self.trade_utils.order(hold_share.stock_code,
                                             now_price, stock_cnt, False, self.get_time_now())
             if result[0] != 0 and result[1] != 0:
-                hold_share.deal_stock(self.get_time_now(), deal_cnt, False)
+                hold_share.deal_stock(self.get_time_now(), result[1], False)
                 self.dot_utils.deal_dot(hold_share.stock_code, hold_share.stock_name,
                                         result[1], result[0], self.get_time_now(), False)
             return Deal(result[0], result[1], False)
@@ -203,13 +210,17 @@ class Martin:
             for ladder in hold_share.ladder_holds:
                 if ladder.stock_cnt == 0:  # buy
                     if self.is_price_range(ladder.ladder_price, price_list[5][0]):
-                        deal = self.order(hold_share, price_list[5][0])
+                        deal = self.order(hold_share, price_list[8][0])
+                        if deal.price == 0 or deal.stock_cnt == 0:
+                            continue
                         ladder.buy_price = deal.price
                         ladder.stock_cnt = deal.stock_cnt
                         ladder.buy_time = self.get_time_now()
                         self.update_hold_share(hold_share, deal)
                 elif self.is_price_range(ladder.buy_price * (1 + self.profit_rate), price_list[0][0]):
-                    deal = self.order(hold_share, price_list[4][0], ladder.stock_cnt, False)
+                    deal = self.order(hold_share, price_list[3][0], ladder.stock_cnt, False)
+                    if deal.price == 0 or deal.stock_cnt == 0:
+                        continue
                     deal.buy_price = ladder.buy_price
                     ladder.buy_price = 0
                     ladder.stock_cnt -= deal.stock_cnt
@@ -246,6 +257,7 @@ class Martin:
             else:
                 hold_share.suc_cnt -= 1
                 self.account.suc_cnt -= 1
+                print("profit:{}, buy:{}, sell:{}, cnt:{}".format(profit, deal.buy_price, deal.price, deal.stock_cnt))
             hold_share.trade_cnt += 1
             hold_share.price = (hold_share.price * hold_share.stock_cnt - cost) \
                                / (hold_share.stock_cnt - deal.stock_cnt)
@@ -256,7 +268,7 @@ class Martin:
             self.account.trade_cnt += 1
             self.account.profit += profit
 
-        if self.print_no:
+        if PRINT_ON:
             print("update_hold_share:{},code:{},cnt:{},price:{};deal.price:{},deal.cnt:{};tradeCnt:{},sucCnt:{},remain:{},profit:{}" \
                   .format(hold_share.stock_name, hold_share.stock_code, hold_share.stock_cnt, hold_share.price,
                           deal.price, deal.stock_cnt,
@@ -264,5 +276,23 @@ class Martin:
 
 
 
+
+def hold_share_test():
+    hold_share_512800 = HoldShare('512800.XSHG', '银行etf', 1.017, 0, 0, 0.005)
+    now_time = datetime.datetime(2020, 1, 1)
+    total = 0
+    for i in range(200):
+        deal_cnt = 1000 * (i % 10)
+        if i % 3 == 0:  #sell
+            result = hold_share_512800.deal_stock(now_time, deal_cnt, False)
+            total -= result
+            print("time:{}, sell:{}, total:{}".format(now_time, result, total))
+        else:
+            hold_share_512800.deal_stock(now_time, deal_cnt)
+            total += deal_cnt
+            print("time:{}, buy:{}, total:{}".format(now_time, deal_cnt, total))
+        now_time += datetime.timedelta(hours=7)
+    print(hold_share_512800)
+
 if __name__ == '__main__':
-    a = 0
+    hold_share_test()

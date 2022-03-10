@@ -73,9 +73,9 @@ class DealTimeGenerator:
         else:
             self.now_date += datetime.timedelta(seconds=period)
 
-        up_start = datetime.datetime(self.now_date.year, self.now_date.month, self.now_date.day, 9, 30, 0)
+        up_start = datetime.datetime(self.now_date.year, self.now_date.month, self.now_date.day, 9, 31, 0)
         up_end = datetime.datetime(self.now_date.year, self.now_date.month, self.now_date.day, 11, 30, 0)
-        down_start = datetime.datetime(self.now_date.year, self.now_date.month, self.now_date.day, 13, 0, 0)
+        down_start = datetime.datetime(self.now_date.year, self.now_date.month, self.now_date.day, 13, 1, 0)
 
         if self.now_date < up_start:
             self.now_date = up_start

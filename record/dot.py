@@ -111,7 +111,7 @@ class dot_utils:
     def deal_dot(self, stock_code, stock_name, stock_cnt, price, now_time, is_buy=True):
 
         if self.print_no:
-            print("deal_dot:{},code:{},cnt:{},price:{},time:{},is_buy{}".format(stock_name, stock_code, stock_cnt, price, now_time, is_buy))
+            print("deal_dot:{},code:{},cnt:{},price:{},time:{},is_buy:{}".format(stock_name, stock_code, stock_cnt, price, now_time, is_buy))
 
         ins = "insert into deal_dot_{} (`id`, `back_test_info_id`, `stock_code`, `stock_name`, `stock_cnt`, `deal_time`,`price`, `is_buy`)" \
               "values (%s, %s, %s, %s, %s, %s, %s, %s)".format(self.back_test_info.table_index)
