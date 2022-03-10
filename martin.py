@@ -68,8 +68,8 @@ class HoldShare:
         if is_buy:
             hold_price = dict([("deal_time", now_time), ("stock_cnt", stock_cnt)])
             self.hold_prices.append(hold_price)
+            dealed_cnt = stock_cnt
         else:
-            dealed_cnt = 0
             for i in range(len(self.hold_prices)):
                 if du.get_time_diff(now_time, self.hold_prices[i]["deal_time"], 'day') > 1:
                     if dealed_cnt < stock_cnt:
@@ -89,7 +89,7 @@ class HoldShare:
             total = 0
             for i in range(len(self.hold_prices)):
                 total += self.hold_prices[i]["stock_cnt"]
-            print("deal_stock:time:{} total:{}, stockCnt:{}, dealCnt:{}, is_buy:{}".format(now_time, total, stock_cnt, dealed_cnt, is_buy))
+            print("deal_stock:time:{} total:{}, tobe deal Cnt:{}, dealedCnt:{}, is_buy:{}".format(now_time, total, stock_cnt, dealed_cnt, is_buy))
         return dealed_cnt
 
     def cal_ladder_hold(self):
@@ -257,7 +257,7 @@ class Martin:
             else:
                 hold_share.suc_cnt -= 1
                 self.account.suc_cnt -= 1
-                print("profit:{}, buy:{}, sell:{}, cnt:{}".format(profit, deal.buy_price, deal.price, deal.stock_cnt))
+            print("profit:{}, buy:{}, sell:{}, cnt:{}".format(profit, deal.buy_price, deal.price, deal.stock_cnt))
             hold_share.trade_cnt += 1
             hold_share.price = (hold_share.price * hold_share.stock_cnt - cost) \
                                / (hold_share.stock_cnt - deal.stock_cnt)
